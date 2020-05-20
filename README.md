@@ -1,7 +1,6 @@
-# todo: Rust Template
+# Circle Gauntlet
 
-todo: Description paragraph. (grep for all the `todos`)
-todo: turn on sponsors in repo settings
+Open source game using Rusty Engine: Blue circle trying to reach green circle without touching red circles.
 
 If you would like to support this project, please star this repository and [sponsor](https://github.com/sponsors/CleanCut) me. 💖
 
