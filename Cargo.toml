@@ -1,19 +1,19 @@
 [package]
-name = "todo:rust_template"
+name = "r_circlegauntlet"
 version = "0.1.0"
 authors = ["Nathan Stocks <nathan@agileperception.com>"]
-description = "todo: Description"
+description = "Open source game using Rusty Engine: Blue circle trying to reach green circle without touching red circles "
 edition = "2018"
-homepage = "https://github.com/CleanCut/todo:rusty_template"
-repository = "https://github.com/CleanCut/todo:rusty_template"
+homepage = "https://github.com/CleanCut/r_circlegauntlet"
+repository = "https://github.com/CleanCut/r_circlegauntlet"
 readme = "README.md"
-#keywords = ["game", "engine", "graphics", "audio", "rusty"]
-#categories = ["game-engines"]
+keywords = ["game", "rusty"]
+categories = ["games"]
 license = "MIT OR Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
-
-
+rusty_engine = { path = "../rusty_engine", version = "0.10.0" }
+legion = "0.2.1"
+rand = "0.7.3"
