@@ -1,6 +1,6 @@
 use legion::prelude::*;
 use rand::prelude::*;
-use rusty_engine::gfx::event::{ButtonProcessor, ButtonState, ButtonValue, GameEvent};
+use rusty_engine::gfx::event::{ButtonProcessor, GameEvent};
 use rusty_engine::gfx::{color::Color, Sprite, Window};
 use rusty_engine::glm::{distance2, Vec2};
 
@@ -98,33 +98,12 @@ fn main() {
             }
         }
         window.drawstart();
-        // Goal
-        for (pos, sprite_idx) in <(Read<Position>, Read<SpriteIndex>)>::query()
-            .filter(tag_value(&Goal))
+
+        // Physics stuff
+        for (mut pos, mut vel) in <(Write<Position>, Write<Velocity>)>::query()
+            .filter(tag_value(&Player))
             .iter(&mut world)
         {
-            let sprite = sprites.get_mut(sprite_idx.0).unwrap();
-            sprite.transform.pos = *pos;
-            sprite.draw(&mut window);
-        }
-
-        // Obstacles
-        for (pos, sprite_idx) in <(Read<Position>, Read<SpriteIndex>)>::query()
-            .filter(tag_value(&Obstacle))
-            .iter(&mut world)
-        {
-            let sprite = sprites.get_mut(sprite_idx.0).unwrap();
-            sprite.transform.pos = *pos;
-            sprite.draw(&mut window);
-        }
-
-        // Player
-        for (mut pos, mut vel, sprite_idx) in
-            <(Write<Position>, Write<Velocity>, Read<SpriteIndex>)>::query()
-                .filter(tag_value(&Player))
-                .iter(&mut world)
-        {
-            let sprite = sprites.get_mut(sprite_idx.0).unwrap();
             let max_vel = 0.0005;
             let velocity_scale = 0.000005;
             let drag = 0.999;
@@ -134,6 +113,34 @@ fn main() {
                 (*vel).0 = (*vel).0.normalize() * max_vel;
             }
             *pos = *pos + (*vel).0;
+        }
+
+        // Draw the Goal
+        for (pos, sprite_idx) in <(Read<Position>, Read<SpriteIndex>)>::query()
+            .filter(tag_value(&Goal))
+            .iter(&mut world)
+        {
+            let sprite = sprites.get_mut(sprite_idx.0).unwrap();
+            sprite.transform.pos = *pos;
+            sprite.draw(&mut window);
+        }
+
+        // Draw the Obstacles
+        for (pos, sprite_idx) in <(Read<Position>, Read<SpriteIndex>)>::query()
+            .filter(tag_value(&Obstacle))
+            .iter(&mut world)
+        {
+            let sprite = sprites.get_mut(sprite_idx.0).unwrap();
+            sprite.transform.pos = *pos;
+            sprite.draw(&mut window);
+        }
+
+        // Draw the Player
+        for (pos, sprite_idx) in <(Read<Position>, Read<SpriteIndex>)>::query()
+            .filter(tag_value(&Player))
+            .iter(&mut world)
+        {
+            let sprite = sprites.get_mut(sprite_idx.0).unwrap();
             sprite.transform.pos = *pos;
             sprite.draw(&mut window);
         }
