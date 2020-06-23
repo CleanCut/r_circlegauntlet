@@ -2,7 +2,8 @@ use legion::prelude::*;
 use rand::prelude::*;
 use rusty_engine::gfx::event::{ButtonProcessor, GameEvent};
 use rusty_engine::gfx::{color::Color, Sprite, Window};
-use rusty_engine::glm::{cross, distance, distance2, reflect_vec, Vec2};
+use rusty_engine::glm::{distance, distance2, reflect_vec, Vec2};
+use std::time::Instant;
 
 const GOAL_RADIUS: f32 = 1. / 8.;
 const OBSTACLE_RADIUS: f32 = 1. / 12.;
@@ -89,10 +90,15 @@ fn main() {
         world.insert((Obstacle,), vec![(pos, SpriteIndex(2))]);
     }
 
+    // GAME LOOP
     let mut button_processor = ButtonProcessor::new();
+    let mut instant = Instant::now();
     'gameloop: loop {
+        let delta = instant.elapsed();
+        instant = Instant::now();
         let mut dead = false;
 
+        // Process player input
         for event in window.poll_game_events() {
             match event {
                 GameEvent::Quit => break 'gameloop,
@@ -103,7 +109,6 @@ fn main() {
                 _ => {}
             }
         }
-        window.drawstart();
 
         // Get the player's position
         let mut player_pos = Position::new(0., 0.);
@@ -114,7 +119,7 @@ fn main() {
             player_pos = *pos;
         }
 
-        // Detect Collision
+        // Detect Obstacle Collision
         let mut maybe_collision = None;
         for pos in <Read<Position>>::query()
             .filter(tag_value(&Obstacle))
@@ -131,20 +136,26 @@ fn main() {
             .iter(&mut world)
         {
             // Player's new velocity based on previous velocity and current input
-            let max_vel = 0.0008;
-            let bounce_vel = 0.0015;
-            let velocity_scale = 0.000005;
-            let drag = 0.999;
+            let max_vel = 0.5;
+            let win_vel = 0.9;
+            let bounce_vel = 0.75;
+            let input_scale = 1.;
+            let drag = 0.8;
+
             // Apply drag first
-            (*vel).0 *= drag;
+            (*vel).0 *= 1.0 - drag * delta.as_secs_f32();
+
+            // Then apply accelleration in the direction of the input
             let magnitude_before = (*vel).0.magnitude();
-            (*vel).0 += button_processor.direction * velocity_scale;
-            // If we're over max velocity, clamp velocity so input only affects post-drag direction
-            if (*vel).0.magnitude() > max_vel {
+            (*vel).0 += button_processor.direction * input_scale * delta.as_secs_f32();
+
+            // If we're over max velocity, clamp velocity magnitude to the same as before input
+            // accelleration so input only affects direction.
+            if (*vel).0.magnitude() > max_vel && (*vel).0.magnitude() > magnitude_before {
                 (*vel).0 = (*vel).0.normalize() * magnitude_before;
             }
 
-            // Collision?
+            // Collision with obstacle?
             if let Some(collision_pos) = maybe_collision {
                 // Reflect velocity & boost it upon collision
                 let normal_vector = (collision_pos - *pos).normalize();
@@ -154,8 +165,22 @@ fn main() {
                 (*vel).0 = new_velocity;
             }
 
+            // Almost to the goal?
+            let goal_distance = distance(&*pos, &goal_start_pos);
+            if goal_distance < PLAYER_RADIUS + GOAL_RADIUS {
+                (*vel).0 += ((goal_start_pos - *pos).normalize() * delta.as_secs_f32()).normalize()
+                    * win_vel
+                    * delta.as_secs_f32();
+            }
+
+            // Reached the goal?
+            if goal_distance < (PLAYER_RADIUS + GOAL_RADIUS) / 3. {
+                println!("YOU WIN!");
+                break 'gameloop;
+            }
+
             // Update position
-            let new_pos = *pos + (*vel).0;
+            let new_pos = *pos + (*vel).0 * delta.as_secs_f32();
             *pos = new_pos;
 
             // Death by edge?
@@ -164,10 +189,12 @@ fn main() {
                 || new_pos[1] < -1. - PLAYER_RADIUS
                 || new_pos[1] > 1. + PLAYER_RADIUS
             {
-                println!("DEAD");
                 dead = true;
             }
         }
+
+        // RENDER THE SCENE
+        window.drawstart();
 
         // Draw the Goal
         for (pos, sprite_idx) in <(Read<Position>, Read<SpriteIndex>)>::query()
@@ -202,6 +229,7 @@ fn main() {
         window.drawfinish();
 
         if dead {
+            println!("YOU DIED!");
             break 'gameloop;
         }
     }
