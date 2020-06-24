@@ -8,12 +8,16 @@ use std::time::Instant;
 const GOAL_RADIUS: f32 = 1. / 8.;
 const OBSTACLE_RADIUS: f32 = 1. / 12.;
 const PLAYER_RADIUS: f32 = 1. / 16.;
+const LIFE_MAX: i32 = 10;
+const LIFE_CIRCLE_RADIUS: f32 = 1. / 48.;
 
 type Position = Vec2;
 struct Velocity(Vec2);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Goal;
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct LifeCircle;
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Obstacle;
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -55,11 +59,20 @@ fn main() {
             OBSTACLE_RADIUS,
             Color::new(1., 0., 0.),
         ),
+        // Life Circles - each circle represents a unit of life
+        Sprite::smooth_circle(
+            &window,
+            Position::new(0., 0.), // Ignored
+            0.,
+            1.,
+            LIFE_CIRCLE_RADIUS,
+            Color::new(0., 0., 1.),
+        ),
     ];
 
     let goal_start_pos = Position::new(0.75, -0.75);
-    let player_start_pos = Position::new(-0.75, 0.75);
     world.insert((Goal,), vec![(goal_start_pos, SpriteIndex(0))]);
+    let player_start_pos = Position::new(-0.75, 0.75);
     world.insert(
         (Player,),
         vec![(
@@ -68,6 +81,9 @@ fn main() {
             SpriteIndex(1),
         )],
     );
+
+
+    // Obstacle starting places
     let mut rng = rand::thread_rng();
     let mut prev_positions = vec![];
     let obstacle_spacing = 0.1;
@@ -91,6 +107,7 @@ fn main() {
     }
 
     // GAME LOOP
+    let mut life = LIFE_MAX;
     let mut button_processor = ButtonProcessor::new();
     let mut instant = Instant::now();
     'gameloop: loop {
@@ -157,6 +174,11 @@ fn main() {
 
             // Collision with obstacle?
             if let Some(collision_pos) = maybe_collision {
+                // Colliding hurts
+                life -= 1;
+                if life <= 0 {
+                    dead = true;
+                }
                 // Reflect velocity & boost it upon collision
                 let normal_vector = (collision_pos - *pos).normalize();
                 let surface_vector = Vec2::new(-normal_vector[1], normal_vector[0]);
@@ -223,6 +245,14 @@ fn main() {
         {
             let sprite = sprites.get_mut(sprite_idx.0).unwrap();
             sprite.transform.pos = *pos;
+            sprite.draw(&mut window);
+        }
+
+        // Draw the life circles
+        for i in 0..life {
+            let pos = Position::new(-1.0 + LIFE_CIRCLE_RADIUS + (2.0 * i as f32 * LIFE_CIRCLE_RADIUS), 1.0 - LIFE_CIRCLE_RADIUS);
+            let sprite = sprites.get_mut(3).unwrap();
+            sprite.transform.pos = pos;
             sprite.draw(&mut window);
         }
 
