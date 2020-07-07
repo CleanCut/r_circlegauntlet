@@ -1,5 +1,6 @@
 use legion::prelude::*;
 use rand::prelude::*;
+use rusty_engine::audio::Audio;
 use rusty_engine::gfx::event::{ButtonProcessor, GameEvent};
 use rusty_engine::gfx::{color::Color, Sprite, Window};
 use rusty_engine::glm::{distance, distance2, reflect_vec, Vec2};
@@ -26,6 +27,14 @@ struct Player;
 struct SpriteIndex(usize);
 
 fn main() {
+    let mut audio = Audio::new();
+    audio.add("bounce", "sound/bounce.wav");
+    audio.add("death", "sound/death.wav");
+    audio.add("startup", "sound/startup.wav");
+    audio.add("warning_one_life", "sound/warning_one_life.wav");
+    audio.add("win", "sound/win.wav");
+    audio.play("startup");
+
     let universe = Universe::new();
     let mut world = universe.create_world();
     let mut window = Window::new(None, "Circle Gauntlet");
@@ -179,6 +188,12 @@ fn main() {
                 if life <= 0 {
                     dead = true;
                 }
+                // Colliding makes a sound of some type
+                if life == 1 {
+                    audio.play("warning_one_life");
+                } else {
+                    audio.play("bounce");
+                }
                 // Reflect velocity & boost it upon collision
                 let normal_vector = (collision_pos - *pos).normalize();
                 let surface_vector = Vec2::new(-normal_vector[1], normal_vector[0]);
@@ -198,6 +213,7 @@ fn main() {
             // Reached the goal?
             if goal_distance < (PLAYER_RADIUS + GOAL_RADIUS) / 3. {
                 println!("YOU WIN!");
+                audio.play("win");
                 break 'gameloop;
             }
 
@@ -260,7 +276,9 @@ fn main() {
 
         if dead {
             println!("YOU DIED!");
+            audio.play("death");
             break 'gameloop;
         }
     }
+    audio.wait();
 }

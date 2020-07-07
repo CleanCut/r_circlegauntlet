@@ -14,6 +14,6 @@ license = "MIT OR Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rusty_engine = { path = "../rusty_engine", version = "0.10.0" }
+rusty_engine = { path = "../rusty_engine", version = "0.11.0" }
 legion = "0.2.1"
 rand = "0.7.3"

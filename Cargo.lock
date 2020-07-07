@@ -1484,23 +1484,24 @@ dependencies = [
 
 [[package]]
 name = "rusty_core"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "nalgebra-glm",
 ]
 
 [[package]]
 name = "rusty_engine"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "rusty_audio",
  "rusty_core",
  "rusty_gfx",
+ "rusty_time",
 ]
 
 [[package]]
 name = "rusty_gfx"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "glium",
  "image",
@@ -1508,6 +1509,10 @@ dependencies = [
  "rusty_core",
  "serde",
 ]
+
+[[package]]
+name = "rusty_time"
+version = "0.11.0"
 
 [[package]]
 name = "same-file"
