@@ -91,7 +91,6 @@ fn main() {
         )],
     );
 
-
     // Obstacle starting places
     let mut rng = rand::thread_rng();
     let mut prev_positions = vec![];
@@ -159,7 +158,7 @@ fn main() {
         // Adjust player velocity
         for (mut pos, mut vel) in <(Write<Position>, Write<Velocity>)>::query()
             .filter(tag_value(&Player))
-            .iter(&mut world)
+            .iter_mut(&mut world)
         {
             // Player's new velocity based on previous velocity and current input
             let max_vel = 0.5;
@@ -266,7 +265,10 @@ fn main() {
 
         // Draw the life circles
         for i in 0..life {
-            let pos = Position::new(-1.0 + LIFE_CIRCLE_RADIUS + (2.0 * i as f32 * LIFE_CIRCLE_RADIUS), 1.0 - LIFE_CIRCLE_RADIUS);
+            let pos = Position::new(
+                -1.0 + LIFE_CIRCLE_RADIUS + (2.0 * i as f32 * LIFE_CIRCLE_RADIUS),
+                1.0 - LIFE_CIRCLE_RADIUS,
+            );
             let sprite = sprites.get_mut(3).unwrap();
             sprite.transform.pos = pos;
             sprite.draw(&mut window);
