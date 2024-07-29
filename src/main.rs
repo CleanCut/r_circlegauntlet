@@ -2,6 +2,7 @@ use legion::prelude::*;
 use rand::prelude::*;
 use rusty_engine::audio::Audio;
 use rusty_engine::gfx::event::{ButtonProcessor, GameEvent};
+use rusty_engine::gfx::ShapeStyle;
 use rusty_engine::gfx::{color::Color, Sprite, Window};
 use rusty_engine::glm::{distance, distance2, reflect_vec, Vec2};
 use std::time::Instant;
@@ -11,6 +12,7 @@ const OBSTACLE_RADIUS: f32 = 1. / 12.;
 const PLAYER_RADIUS: f32 = 1. / 16.;
 const LIFE_MAX: i32 = 10;
 const LIFE_CIRCLE_RADIUS: f32 = 1. / 48.;
+const ENEMY_WIDTH: f32 = 1. / 8.;
 
 type Position = Vec2;
 struct Velocity(Vec2);
@@ -25,6 +27,8 @@ struct Obstacle;
 struct Player;
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct SpriteIndex(usize);
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Enemy;
 
 fn main() {
     let mut audio = Audio::new();
@@ -77,6 +81,17 @@ fn main() {
             LIFE_CIRCLE_RADIUS,
             Color::new(0., 0., 1.),
         ),
+        // Enemy - Square enemy chases the player
+        Sprite::new_rectangle(
+            &window,
+            Position::new(0., 0.),
+            0.,
+            1.,
+            ENEMY_WIDTH,
+            ENEMY_WIDTH,
+            Color::new(1.0, 1.0, 0.0),
+            ShapeStyle::Fill,
+        ),
     ];
 
     let goal_start_pos = Position::new(0.75, -0.75);
@@ -113,6 +128,9 @@ fn main() {
         prev_positions.push(pos);
         world.insert((Obstacle,), vec![(pos, SpriteIndex(2))]);
     }
+
+    // Enemy starting place
+    world.insert((Enemy,), vec![(Position::new(0.75, 0.75),)]);
 
     // GAME LOOP
     let mut life = LIFE_MAX;
@@ -271,6 +289,16 @@ fn main() {
             );
             let sprite = sprites.get_mut(3).unwrap();
             sprite.transform.pos = pos;
+            sprite.draw(&mut window);
+        }
+
+        // Draw the enemy
+        for (pos,) in <(Read<Position>,)>::query()
+            .filter(tag_value(&Enemy))
+            .iter(&mut world)
+        {
+            let sprite = sprites.get_mut(4).unwrap();
+            sprite.transform.pos = *pos;
             sprite.draw(&mut window);
         }
 
