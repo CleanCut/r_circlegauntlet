@@ -20,8 +20,6 @@ struct Velocity(Vec2);
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Goal;
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct LifeCircle;
-#[derive(Clone, Copy, Debug, PartialEq)]
 struct Obstacle;
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Player;
@@ -82,15 +80,23 @@ fn main() {
             Color::new(0., 0., 1.),
         ),
         // Enemy - Square enemy chases the player
-        Sprite::new_rectangle(
+        // Sprite::new_rectangle(
+        //     &window,
+        //     Position::new(0., 0.),
+        //     0.,
+        //     1.,
+        //     ENEMY_WIDTH,
+        //     ENEMY_WIDTH,
+        //     Color::new(1.0, 1.0, 0.0),
+        //     ShapeStyle::Fill,
+        // ),
+        Sprite::smooth_circle(
             &window,
             Position::new(0., 0.),
             0.,
             1.,
-            ENEMY_WIDTH,
-            ENEMY_WIDTH,
+            ENEMY_WIDTH * 0.5,
             Color::new(1.0, 1.0, 0.0),
-            ShapeStyle::Fill,
         ),
     ];
 
@@ -130,7 +136,26 @@ fn main() {
     }
 
     // Enemy starting place
-    world.insert((Enemy,), vec![(Position::new(0.75, 0.75),)]);
+    let enemy_spacing = 0.125;
+    let mut pos = player_start_pos;
+    while distance2(&pos, &player_start_pos) < enemy_spacing
+        || distance2(&pos, &goal_start_pos) < enemy_spacing
+        || prev_positions
+            .iter()
+            .map(|ref x| distance2(&pos, &x))
+            .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .unwrap_or(500.)
+            .partial_cmp(&enemy_spacing)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            == std::cmp::Ordering::Less
+    {
+        pos = Position::new(rng.gen::<f32>() * 2.0 - 1.0, rng.gen::<f32>() * 2.0 - 1.0);
+    }
+    prev_positions.push(pos);
+    world.insert(
+        (Enemy,),
+        vec![(Position::new(0.75, 0.75), Velocity(Vec2::new(0.0, 0.0)))],
+    );
 
     // GAME LOOP
     let mut life = LIFE_MAX;
@@ -174,10 +199,13 @@ fn main() {
         }
 
         // Adjust player velocity
+        // Save player position for the enemy to see
+        let mut player_pos = Position::new(0.0, 0.0);
         for (mut pos, mut vel) in <(Write<Position>, Write<Velocity>)>::query()
             .filter(tag_value(&Player))
             .iter_mut(&mut world)
         {
+            player_pos = *pos;
             // Player's new velocity based on previous velocity and current input
             let max_vel = 0.5;
             let win_vel = 0.9;
@@ -232,6 +260,72 @@ fn main() {
                 println!("YOU WIN!");
                 audio.play("win");
                 break 'gameloop;
+            }
+        }
+
+        // Adjust enemy velocity
+        let mut enemy_bounce_normal_vector = Vec2::zeros();
+        let mut enemy_bounce = false;
+        for (mut pos, mut vel) in <(Write<Position>, Write<Velocity>)>::query()
+            .filter(tag_value(&Enemy))
+            .iter_mut(&mut world)
+        {
+            // Enemy's new velocity based on previous velocity and current input
+            let max_vel = 0.5 * 0.5;
+            let drag = 0.8;
+
+            // Apply drag first
+            (*vel).0 *= 1.0 - drag * delta.as_secs_f32();
+
+            // Then apply acceleration in the direction of the player
+            let magnitude_before = (*vel).0.magnitude();
+            (*vel).0 += (player_pos - *pos) * delta.as_secs_f32();
+
+            // If we're over max velocity, clamp velocity magnitude to the same as before input
+            // acceleration so input only affects direction.
+            if (*vel).0.magnitude() > max_vel && (*vel).0.magnitude() > magnitude_before {
+                (*vel).0 = (*vel).0.normalize() * magnitude_before;
+            }
+
+            // Update position
+            let new_pos = *pos + (*vel).0 * delta.as_secs_f32();
+            *pos = new_pos;
+
+            // Kill player?
+            if distance(&player_pos, &pos) < PLAYER_RADIUS + (ENEMY_WIDTH * 0.5) {
+                life -= 1;
+                if life <= 0 {
+                    dead = true;
+                }
+
+                // // Colliding makes a sound of some type
+                if life == 1 {
+                    audio.play("warning_one_life");
+                } else {
+                    audio.play("bounce");
+                }
+                // Reflect velocity & boost it upon collision
+                enemy_bounce_normal_vector = (player_pos - *pos).normalize();
+                enemy_bounce = true;
+                vel.0 *= -0.5;
+            }
+        }
+
+        // Bounce the player off of the enemy
+        for (mut pos, mut vel) in <(Write<Position>, Write<Velocity>)>::query()
+            .filter(tag_value(&Player))
+            .iter_mut(&mut world)
+        {
+            let bounce_vel = 0.75;
+
+            if enemy_bounce {
+                let surface_vector = Vec2::new(
+                    -enemy_bounce_normal_vector[1],
+                    enemy_bounce_normal_vector[0],
+                );
+                let new_velocity =
+                    -reflect_vec(&((*vel).0), &surface_vector).normalize() * bounce_vel;
+                (*vel).0 = new_velocity;
             }
 
             // Update position
