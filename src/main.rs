@@ -2,7 +2,6 @@ use legion::prelude::*;
 use rand::prelude::*;
 use rusty_engine::audio::Audio;
 use rusty_engine::gfx::event::{ButtonProcessor, GameEvent};
-use rusty_engine::gfx::ShapeStyle;
 use rusty_engine::gfx::{color::Color, Sprite, Window};
 use rusty_engine::glm::{distance, distance2, reflect_vec, Vec2};
 use std::time::Instant;
@@ -201,7 +200,7 @@ fn main() {
         // Adjust player velocity
         // Save player position for the enemy to see
         let mut player_pos = Position::new(0.0, 0.0);
-        for (mut pos, mut vel) in <(Write<Position>, Write<Velocity>)>::query()
+        for (pos, mut vel) in <(Write<Position>, Write<Velocity>)>::query()
             .filter(tag_value(&Player))
             .iter_mut(&mut world)
         {
